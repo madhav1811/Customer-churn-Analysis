@@ -134,11 +134,46 @@ def predict(customer: CustomerData, db: Session = Depends(get_db)):
     )
     db.add(log_entry)
     db.commit()
+
+    # Calculate Feature Impact (Simple Perturbation)
+    top_features = ['tenure', 'Contract', 'InternetService', 'MonthlyCharges', 'TotalServices']
+    impacts = []
+    
+    # Base prob for comparisons
+    base_prob = float(prob)
+    
+    for feat in top_features:
+        # Create a "what if" scenario version of the input
+        temp_input = input_df.copy()
+        
+        # Determine a "safe/ideal" value for the feature to see how much the current value hurt/helped
+        if feat == 'tenure': temp_input[feat] = 72
+        elif feat == 'Contract': temp_input[feat] = 2 # 'Two year'
+        elif feat == 'InternetService': temp_input[feat] = 2 # 'No'
+        elif feat == 'MonthlyCharges': temp_input[feat] = 20.0
+        elif feat == 'TotalServices': temp_input[feat] = 8
+        
+        # Scale and predict
+        if feat in le_dict:
+            # We already have encoded values in input_df, so just use encoded defaults above
+            pass
+            
+        temp_scaled = scaler.transform(temp_input)
+        temp_prob = model.predict_proba(temp_scaled)[0][1]
+        
+        # Impact is how much the current value pushed probability up (positive) or down (negative)
+        impact_score = base_prob - temp_prob
+        impacts.append({
+            "feature": feat,
+            "impact": round(float(impact_score), 4),
+            "current_value": str(getattr(customer, feat) if hasattr(customer, feat) else input_df[feat].iloc[0])
+        })
     
     return {
         "churn_probability": round(float(prob), 4),
         "risk_level": risk,
-        "strategies": strategies
+        "strategies": strategies,
+        "feature_impacts": impacts
     }
 
 @app.get("/stats")
