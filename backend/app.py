@@ -60,6 +60,25 @@ class CustomerData(BaseModel):
     MonthlyCharges: float = 70.0
     TotalCharges: float = 70.0
 
+def engineer_features(data):
+    # Feature 1: Total Services
+    service_cols = ['PhoneService', 'MultipleLines', 'OnlineSecurity', 
+                   'OnlineBackup', 'DeviceProtection', 'TechSupport', 
+                   'StreamingTV', 'StreamingMovies']
+    # Check which columns exist in input
+    existing_cols = [c for c in service_cols if c in data.columns]
+    data['TotalServices'] = (data[existing_cols] == 'Yes').sum(axis=1)
+    
+    # Feature 2: Tenure grouping
+    data['TenureGroup'] = pd.cut(data['tenure'], 
+                                bins=[0, 12, 24, 48, 60, 100], 
+                                labels=['0-1yr', '1-2yr', '2-4yr', '4-5yr', '5yr+'])
+    
+    # Feature 3: Charge density
+    data['ChargeDensity'] = data['TotalCharges'] / (data['tenure'] + 1)
+    
+    return data
+
 @app.get("/")
 def read_root():
     return {"status": "online", "message": "Churn Analysis API is running"}
@@ -73,6 +92,9 @@ def predict(customer: CustomerData, db: Session = Depends(get_db)):
     input_df = pd.DataFrame([customer.dict()])
     
     # Preprocess
+    # Feature Engineering
+    input_df = engineer_features(input_df)
+
     # Encoding
     for col, le in le_dict.items():
         if col in input_df.columns:
