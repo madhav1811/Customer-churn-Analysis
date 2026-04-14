@@ -1,114 +1,63 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { Users, TrendingUp, DollarSign, LayoutDashboard, BarChart3, Info } from 'lucide-react';
-import StatsCard from './components/StatsCard';
-import ChurnCharts from './components/ChurnCharts';
-import PredictionForm from './components/PredictionForm';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Navbar from './components/Navbar';
+import LandingPage from './pages/LandingPage';
+import LoginPage from './pages/LoginPage';
+import DashboardPage from './pages/DashboardPage';
+import ProfilePage from './pages/ProfilePage';
 import './App.css';
 
-const API_BASE = 'http://127.0.0.1:8005';
-
 function App() {
-  const [stats, setStats] = useState<any>(null);
-  const [revenue, setRevenue] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [statsRes, revenueRes] = await Promise.all([
-          axios.get(`${API_BASE}/stats`),
-          axios.get(`${API_BASE}/revenue-impact`)
-        ]);
-        setStats(statsRes.data);
-        setRevenue(revenueRes.data);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
-
   return (
-    <div className="container">
-      <header className="flex justify-between items-center mb-10">
-        <div>
-          <h1 className="text-4xl font-extrabold gradient-text">ChurnGuard AI</h1>
-          <p className="text-text-muted mt-2">Enterprise Customer Retention Dashboard</p>
-        </div>
-        <div className="flex gap-4">
-          <button className="glass px-4 py-2 flex items-center gap-2 hover:bg-white/10">
-            <LayoutDashboard size={18} /> Dashboard
-          </button>
-          <button className="glass px-4 py-2 flex items-center gap-2 hover:bg-white/10">
-            <BarChart3 size={18} /> Analytics
-          </button>
-        </div>
-      </header>
-
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="text-2xl font-semibold animate-pulse">Initializing Analytics...</div>
-        </div>
-      ) : (
-        <>
-          <div className="dashboard-grid">
-            <StatsCard 
-              title="Total Customers" 
-              value={stats?.metrics.total_customers.toLocaleString()} 
-              subtitle="Active subscriber base"
-              icon={<Users size={24} />}
-              color="#6366f1"
-            />
-            <StatsCard 
-              title="Avg. Churn Rate" 
-              value={`${(stats?.metrics.avg_churn_rate * 100).toFixed(1)}%`} 
-              subtitle="Historical average"
-              icon={<TrendingUp size={24} />}
-              trend="down"
-              color="#ec4899"
-            />
-            <StatsCard 
-              title="Annual Revenue at Risk" 
-              value={`$${(revenue?.annual_projected_loss / 1000).toFixed(0)}k`} 
-              subtitle="Projected churn loss"
-              icon={<DollarSign size={24} />}
-              trend="up"
-              color="#f59e0b"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2">
-              <ChurnCharts segmentData={stats?.segments} />
+    <AuthProvider>
+      <Router>
+        <div className="min-h-screen bg-bg-dark flex flex-col">
+          <Navbar />
+          <main className="flex-grow">
+            <Routes>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<LoginPage />} />
               
-              <div className="glass p-6 mt-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Info className="text-primary" size={20} />
-                  <h3 className="font-semibold">Key Insight</h3>
-                </div>
-                <p className="text-text-muted">
-                  Customers with <span className="text-text-main font-bold">Fiber Optic</span> internet service show a significantly higher churn rate of 
-                  <span className="text-danger font-bold"> {(stats?.metrics.fiber_churn_rate * 100).toFixed(1)}%</span>. 
-                  Targeted retention strategies for this segment could save approximately 
-                  <span className="text-success font-bold"> ${(revenue?.monthly_lost_revenue * 0.2).toLocaleString()}</span> in monthly revenue.
-                </p>
-              </div>
-            </div>
+              {/* Protected Routes */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/profile" 
+                element={
+                  <ProtectedRoute>
+                    <ProfilePage />
+                  </ProtectedRoute>
+                } 
+              />
 
-            <div className="lg:col-span-1">
-              <PredictionForm />
+              {/* Catch-all for simple analytics placeholder */}
+              <Route 
+                path="/analytics" 
+                element={
+                  <div className="container py-20 text-center">
+                    <h1 className="text-4xl font-bold gradient-text mb-4">Advanced Analytics</h1>
+                    <p className="text-text-muted">Detailed historical analysis module is coming soon.</p>
+                  </div>
+                } 
+              />
+            </Routes>
+          </main>
+          
+          <footer className="py-10 border-t border-white/5 text-center text-text-muted text-sm bg-black/20">
+            <div className="container">
+              &copy; 2024 ChurnGuard AI. All rights reserved. Enterprise-Grade Predictive Analytics.
             </div>
-          </div>
-        </>
-      )}
-      
-      <footer className="mt-20 text-center text-text-muted text-sm pb-10">
-        &copy; 2024 ChurnGuard AI. All rights reserved. Built with FastAPI & React.
-      </footer>
-    </div>
+          </footer>
+        </div>
+      </Router>
+    </AuthProvider>
   );
 }
 
