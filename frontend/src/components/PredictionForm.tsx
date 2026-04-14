@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import RiskGauge from './RiskGauge';
 import FactorImpact from './FactorImpact';
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'http://127.0.0.1:8005';
 
 const PredictionForm: React.FC = () => {
   const [loading, setLoading] = useState(false);

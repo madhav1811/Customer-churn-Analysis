@@ -6,7 +6,7 @@ import ChurnCharts from './components/ChurnCharts';
 import PredictionForm from './components/PredictionForm';
 import './App.css';
 
-const API_BASE = 'http://127.0.0.1:8000';
+const API_BASE = 'http://127.0.0.1:8005';
 
 function App() {
   const [stats, setStats] = useState<any>(null);
