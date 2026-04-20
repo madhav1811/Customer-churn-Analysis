@@ -23,20 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load ML components
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-MODELS_DIR = os.path.join(BASE_DIR, 'models')
-DATA_PATH = os.path.join(BASE_DIR, '..', 'data', 'Telco-Customer-Churn.csv')
-
+# Load optimal threshold
 try:
-    model = joblib.load(os.path.join(MODELS_DIR, 'churn_model.joblib'))
-    scaler = joblib.load(os.path.join(MODELS_DIR, 'scaler.joblib'))
-    le_dict = joblib.load(os.path.join(MODELS_DIR, 'le_dict.joblib'))
-    feature_names = joblib.load(os.path.join(MODELS_DIR, 'feature_names.joblib'))
-except Exception as e:
-    print(f"Error loading models: {e}")
-    # In a real app we might fail fast here
-    model = None
+    with open(os.path.join(BASE_DIR, 'models', 'optimal_threshold.json'), 'r') as f:
+        threshold_data = json.load(f)
+        optimal_threshold = threshold_data.get('optimal_threshold', 0.5)
+except:
+    optimal_threshold = 0.5
 
 # Pydantic models
 class CustomerData(BaseModel):
@@ -174,7 +167,7 @@ def predict(customer: CustomerData, db: Session = Depends(get_db)):
     
     # Predict
     prob = model.predict_proba(X_scaled)[0][1]
-    risk = "High" if prob > 0.5 else "Medium" if prob > 0.3 else "Low"
+    risk = "High" if prob >= optimal_threshold else "Medium" if prob >= optimal_threshold * 0.7 else "Low"
     
     # Strategies
     strategies = []

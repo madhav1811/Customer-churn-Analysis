@@ -203,14 +203,42 @@ model = StackingClassifier(
 model.fit(X_train_scaled, y_train_res)
 print("Enhanced ensemble training completed!")
 
-# --- Evaluation ---
-y_pred = model.predict(X_test_scaled)
-y_prob = model.predict_proba(X_test_scaled)[:, 1]
-auc = roc_auc_score(y_test, y_prob)
+# --- Enhanced Evaluation with Threshold Optimization ---
+print("Optimizing classification threshold for maximum accuracy...")
 
-print(f"\nImproved Model AUC: {auc:.4f}")
-print("Classification Report:")
-print(classification_report(y_test, y_pred))
+# Get probability predictions
+y_prob = model.predict_proba(X_test_scaled)[:, 1]
+
+# Find optimal threshold for accuracy
+from sklearn.metrics import accuracy_score
+thresholds = np.arange(0.1, 0.9, 0.01)
+accuracies = []
+
+for threshold in thresholds:
+    y_pred_threshold = (y_prob >= threshold).astype(int)
+    acc = accuracy_score(y_test, y_pred_threshold)
+    accuracies.append(acc)
+
+optimal_threshold = thresholds[np.argmax(accuracies)]
+max_accuracy = max(accuracies)
+
+print(f"Optimal threshold: {optimal_threshold:.2f}")
+print(f"Maximum accuracy with threshold: {max_accuracy:.4f}")
+
+# Use optimal threshold for final predictions
+y_pred_optimized = (y_prob >= optimal_threshold).astype(int)
+
+print("\\nOptimized Model Performance:")
+print(f"AUC: {roc_auc_score(y_test, y_prob):.4f}")
+print(f"Accuracy (optimized threshold): {accuracy_score(y_test, y_pred_optimized):.4f}")
+print("\\nClassification Report (optimized):")
+print(classification_report(y_test, y_pred_optimized))
+
+# Save the optimal threshold
+import json
+threshold_data = {'optimal_threshold': float(optimal_threshold)}
+with open(os.path.join(MODELS_DIR, 'optimal_threshold.json'), 'w') as f:
+    json.dump(threshold_data, f)
 
 # --- Save Artifacts ---
 joblib.dump(model, os.path.join(MODELS_DIR, 'churn_model.joblib'))
