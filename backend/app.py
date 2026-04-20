@@ -61,22 +61,84 @@ class CustomerData(BaseModel):
     TotalCharges: float = 70.0
 
 def engineer_features(data):
+    # Total charges cleaning
+    data['TotalCharges'] = pd.to_numeric(data['TotalCharges'], errors='coerce')
+    data['TotalCharges'] = data['TotalCharges'].fillna(data['TotalCharges'].median())
+
     # Feature 1: Total Services
-    service_cols = ['PhoneService', 'MultipleLines', 'OnlineSecurity', 
-                   'OnlineBackup', 'DeviceProtection', 'TechSupport', 
+    service_cols = ['PhoneService', 'MultipleLines', 'OnlineSecurity',
+                   'OnlineBackup', 'DeviceProtection', 'TechSupport',
                    'StreamingTV', 'StreamingMovies']
     # Check which columns exist in input
     existing_cols = [c for c in service_cols if c in data.columns]
     data['TotalServices'] = (data[existing_cols] == 'Yes').sum(axis=1)
-    
+
     # Feature 2: Tenure grouping
-    data['TenureGroup'] = pd.cut(data['tenure'], 
-                                bins=[0, 12, 24, 48, 60, 100], 
+    data['TenureGroup'] = pd.cut(data['tenure'],
+                                bins=[-1, 12, 24, 48, 60, 100],
                                 labels=['0-1yr', '1-2yr', '2-4yr', '4-5yr', '5yr+'])
-    
+
     # Feature 3: Charge density
     data['ChargeDensity'] = data['TotalCharges'] / (data['tenure'] + 1)
-    
+
+    # Feature 4: Contract length indicators
+    data['ContractMonths'] = data['Contract'].map({
+        'Month-to-month': 1,
+        'One year': 12,
+        'Two year': 24
+    }).fillna(0).astype(int)
+    data['IsMonthToMonth'] = (data['Contract'] == 'Month-to-month').astype(int)
+    data['IsTwoYear'] = (data['Contract'] == 'Two year').astype(int)
+
+    # Feature 5: Payment automation and service density
+    data['AutoPay'] = data['PaymentMethod'].str.contains('automatic', case=False, na=False).astype(int)
+    data['ServiceDensity'] = data['TotalServices'] / (data['tenure'] + 1)
+
+    # Feature 6: Senior + partner interaction
+    data['SeniorPartner'] = ((data['SeniorCitizen'] == 1) & (data['Partner'] == 'Yes')).astype(int)
+
+    # ADVANCED FEATURES FOR HIGHER ACCURACY
+
+    # Feature 7: Internet service quality score
+    internet_quality = {
+        'DSL': 1,
+        'Fiber optic': 3,
+        'No': 0
+    }
+    data['InternetQuality'] = data['InternetService'].map(internet_quality).fillna(0)
+
+    # Feature 8: Security package (security + tech support)
+    data['SecurityPackage'] = ((data['OnlineSecurity'] == 'Yes') &
+                              (data['TechSupport'] == 'Yes')).astype(int)
+
+    # Feature 9: Streaming package
+    data['StreamingPackage'] = ((data['StreamingTV'] == 'Yes') &
+                               (data['StreamingMovies'] == 'Yes')).astype(int)
+
+    # Feature 10: Complete package (all services)
+    data['CompletePackage'] = (data['TotalServices'] == 8).astype(int)
+
+    # Feature 11: Charge per service
+    data['ChargePerService'] = data['MonthlyCharges'] / (data['TotalServices'] + 1)
+
+    # Feature 12: Tenure stability (long-term vs short-term)
+    data['TenureStability'] = (data['tenure'] > 24).astype(int)
+
+    # Feature 13: High spender indicator
+    # For single predictions, use a reasonable threshold
+    data['HighSpender'] = (data['MonthlyCharges'] > 100).astype(int)  # Using 100 as threshold
+
+    # Feature 14: Billing efficiency
+    data['BillingEfficiency'] = data['TotalCharges'] / (data['MonthlyCharges'] * data['tenure'] + 1)
+
+    # Feature 15: Contract commitment score
+    contract_scores = {
+        'Month-to-month': 1,
+        'One year': 3,
+        'Two year': 5
+    }
+    data['ContractCommitment'] = data['Contract'].map(contract_scores).fillna(1)
+
     return data
 
 @app.get("/")

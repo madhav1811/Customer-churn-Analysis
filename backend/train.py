@@ -130,8 +130,8 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train_res)
 X_test_scaled = scaler.transform(X_test)
 
-# --- Create Base Models ---
-print("Creating base models for stacking ensemble...")
+# --- Create Enhanced Base Models ---
+print("Creating enhanced base models for stacking ensemble...")
 
 # Base model 1: XGBoost (optimized)
 xgb_base = XGBClassifier(
@@ -140,49 +140,68 @@ xgb_base = XGBClassifier(
     gamma=1, colsample_bytree=0.8, random_state=42, eval_metric='auc'
 )
 
-# Base model 2: Random Forest
+# Base model 2: Random Forest (enhanced)
 rf_base = RandomForestClassifier(
-    n_estimators=200,
-    max_depth=10,
+    n_estimators=300,
+    max_depth=12,
     min_samples_split=5,
     min_samples_leaf=2,
+    max_features='sqrt',
     random_state=42,
     n_jobs=-1
 )
 
-# Base model 3: LightGBM
+# Base model 3: LightGBM (enhanced)
 lgb_base = LGBMClassifier(
-    n_estimators=200,
-    learning_rate=0.1,
-    max_depth=7,
-    subsample=0.8,
-    colsample_bytree=0.8,
+    n_estimators=300,
+    learning_rate=0.08,
+    max_depth=8,
+    subsample=0.85,
+    colsample_bytree=0.85,
+    min_child_samples=20,
     random_state=42,
     verbose=-1
 )
 
-# Meta-learner: Logistic Regression
-meta_learner = LogisticRegression(random_state=42, max_iter=1000)
+# Base model 4: Extra Trees (additional diversity)
+from sklearn.ensemble import ExtraTreesClassifier
+et_base = ExtraTreesClassifier(
+    n_estimators=200,
+    max_depth=10,
+    min_samples_split=5,
+    random_state=42,
+    n_jobs=-1
+)
 
-# --- Create Stacking Ensemble ---
-print("Training stacking ensemble...")
+# Meta-learner: Enhanced Logistic Regression
+from sklearn.linear_model import LogisticRegressionCV
+meta_learner = LogisticRegressionCV(
+    cv=5,
+    random_state=42,
+    max_iter=2000,
+    Cs=np.logspace(-4, 4, 20)
+)
+
+# --- Create Enhanced Stacking Ensemble ---
+print("Training enhanced stacking ensemble...")
 base_models = [
     ('xgboost', xgb_base),
     ('random_forest', rf_base),
-    ('lightgbm', lgb_base)
+    ('lightgbm', lgb_base),
+    ('extra_trees', et_base)
 ]
 
 model = StackingClassifier(
     estimators=base_models,
     final_estimator=meta_learner,
-    cv=3,
+    cv=5,  # Increased cross-validation folds
     n_jobs=-1,
-    passthrough=False
+    passthrough=True  # Include original features for meta-learner
 )
 
-# Train the ensemble
+# Train the enhanced ensemble
 model.fit(X_train_scaled, y_train_res)
-print("Ensemble training completed!")
+print("Enhanced ensemble training completed!")
 
 # --- Evaluation ---
 y_pred = model.predict(X_test_scaled)
