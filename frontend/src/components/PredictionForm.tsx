@@ -50,7 +50,7 @@ const PredictionForm: React.FC = () => {
   };
 
   return (
-    <div className="glass p-8 relative overflow-hidden">
+    <div className="glass p-4 md:p-8 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute top-0 right-0 p-4 opacity-10">
         <Sparkles size={120} />

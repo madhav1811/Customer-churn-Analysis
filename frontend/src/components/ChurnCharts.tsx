@@ -17,9 +17,9 @@ const ChurnCharts: React.FC<ChurnChartsProps> = ({ segmentData }) => {
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-      <div className="glass p-6">
+      <div className="glass p-4 md:p-6">
         <h3 className="text-lg font-semibold mb-4">Churn Rate by Contract Type (%)</h3>
-        <div style={{ width: '100%', height: 300 }}>
+        <div style={{ width: '100%', height: 250 }}>
           <ResponsiveContainer>
             <BarChart data={contractData}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
@@ -41,9 +41,9 @@ const ChurnCharts: React.FC<ChurnChartsProps> = ({ segmentData }) => {
         </div>
       </div>
 
-      <div className="glass p-6">
+      <div className="glass p-4 md:p-6">
         <h3 className="text-lg font-semibold mb-4">Churn by Internet Service (%)</h3>
-        <div style={{ width: '100%', height: 300 }}>
+        <div style={{ width: '100%', height: 250 }}>
           <ResponsiveContainer>
             <PieChart>
               <Pie
