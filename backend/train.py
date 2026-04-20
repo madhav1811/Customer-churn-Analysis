@@ -130,6 +130,31 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train_res)
 X_test_scaled = scaler.transform(X_test)
 
+# --- Feature Selection for Higher Accuracy ---
+print("Performing feature selection to remove noise...")
+
+from sklearn.feature_selection import SelectFromModel
+
+# Use Random Forest feature importance for selection
+temp_rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
+temp_rf.fit(X_train_scaled, y_train_res)
+
+rf_selector = SelectFromModel(temp_rf, prefit=True, max_features=30)
+X_train_selected = rf_selector.transform(X_train_scaled)
+X_test_selected = rf_selector.transform(X_test_scaled)
+
+# Get selected feature indices
+selected_features_mask = rf_selector.get_support()
+selected_feature_names = [feature_names[i] for i in range(len(feature_names)) if selected_features_mask[i]]
+
+print(f"Selected {len(selected_feature_names)} features out of {len(feature_names)}")
+print("Top selected features:", selected_feature_names[:10])
+
+# Use selected features for final training
+X_train_final = X_train_selected
+X_test_final = X_test_selected
+final_feature_names = selected_feature_names
+
 # --- Create Enhanced Base Models ---
 print("Creating enhanced base models for stacking ensemble...")
 
@@ -200,14 +225,14 @@ model = StackingClassifier(
 )
 
 # Train the enhanced ensemble
-model.fit(X_train_scaled, y_train_res)
+model.fit(X_train_final, y_train_res)
 print("Enhanced ensemble training completed!")
 
 # --- Enhanced Evaluation with Threshold Optimization ---
 print("Optimizing classification threshold for maximum accuracy...")
 
 # Get probability predictions
-y_prob = model.predict_proba(X_test_scaled)[:, 1]
+y_prob = model.predict_proba(X_test_final)[:, 1]
 
 # Find optimal threshold for accuracy
 from sklearn.metrics import accuracy_score
@@ -244,6 +269,7 @@ with open(os.path.join(MODELS_DIR, 'optimal_threshold.json'), 'w') as f:
 joblib.dump(model, os.path.join(MODELS_DIR, 'churn_model.joblib'))
 joblib.dump(scaler, os.path.join(MODELS_DIR, 'scaler.joblib'))
 joblib.dump(le_dict, os.path.join(MODELS_DIR, 'le_dict.joblib'))
-joblib.dump(feature_names, os.path.join(MODELS_DIR, 'feature_names.joblib'))
+joblib.dump(final_feature_names, os.path.join(MODELS_DIR, 'feature_names.joblib'))
+joblib.dump(rf_selector, os.path.join(MODELS_DIR, 'feature_selector.joblib'))
 
 print("Optimized model artifacts saved to backend/models/")
