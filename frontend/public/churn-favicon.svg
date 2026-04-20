@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background -->
+  <rect width="100" height="100" fill="#0f172a" rx="15"/>
+  
+  <!-- Chart bars representing analytics -->
+  <rect x="15" y="55" width="12" height="30" fill="#3b82f6" rx="2"/>
+  <rect x="34" y="40" width="12" height="45" fill="#10b981" rx="2"/>
+  <rect x="53" y="30" width="12" height="55" fill="#f59e0b" rx="2"/>
+  <rect x="72" y="25" width="12" height="60" fill="#ef4444" rx="2"/>
+  
+  <!-- Trend line connecting the tops -->
+  <polyline points="21,55 40,40 59,30 78,25" stroke="#06b6d4" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Small circle accent -->
+  <circle cx="78" cy="25" r="2.5" fill="#06b6d4"/>
+</svg>
