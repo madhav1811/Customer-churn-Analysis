@@ -73,6 +73,47 @@ def engineer_features(data):
     # Feature 6: Senior + partner interaction
     data['SeniorPartner'] = ((data['SeniorCitizen'] == 1) & (data['Partner'] == 'Yes')).astype(int)
 
+    # ADVANCED FEATURES FOR HIGHER ACCURACY
+
+    # Feature 7: Internet service quality score
+    internet_quality = {
+        'DSL': 1,
+        'Fiber optic': 3,
+        'No': 0
+    }
+    data['InternetQuality'] = data['InternetService'].map(internet_quality).fillna(0)
+
+    # Feature 8: Security package (security + tech support)
+    data['SecurityPackage'] = ((data['OnlineSecurity'] == 'Yes') &
+                              (data['TechSupport'] == 'Yes')).astype(int)
+
+    # Feature 9: Streaming package
+    data['StreamingPackage'] = ((data['StreamingTV'] == 'Yes') &
+                               (data['StreamingMovies'] == 'Yes')).astype(int)
+
+    # Feature 10: Complete package (all services)
+    data['CompletePackage'] = (data['TotalServices'] == 8).astype(int)
+
+    # Feature 11: Charge per service
+    data['ChargePerService'] = data['MonthlyCharges'] / (data['TotalServices'] + 1)
+
+    # Feature 12: Tenure stability (long-term vs short-term)
+    data['TenureStability'] = (data['tenure'] > 24).astype(int)
+
+    # Feature 13: High spender indicator
+    data['HighSpender'] = (data['MonthlyCharges'] > data['MonthlyCharges'].quantile(0.75)).astype(int)
+
+    # Feature 14: Billing efficiency
+    data['BillingEfficiency'] = data['TotalCharges'] / (data['MonthlyCharges'] * data['tenure'] + 1)
+
+    # Feature 15: Contract commitment score
+    contract_scores = {
+        'Month-to-month': 1,
+        'One year': 3,
+        'Two year': 5
+    }
+    data['ContractCommitment'] = data['Contract'].map(contract_scores).fillna(1)
+
     return data
 
 df = engineer_features(df)
