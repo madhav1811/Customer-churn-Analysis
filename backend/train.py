@@ -23,21 +23,37 @@ def engineer_features(data):
     # Total charges cleaning
     data['TotalCharges'] = pd.to_numeric(data['TotalCharges'], errors='coerce')
     data['TotalCharges'] = data['TotalCharges'].fillna(data['TotalCharges'].median())
-    
-    # Feature 1: Total Services (count of 'Yes' in service columns)
+
+    # Feature 1: Total Services count
     service_cols = ['PhoneService', 'MultipleLines', 'OnlineSecurity', 
                    'OnlineBackup', 'DeviceProtection', 'TechSupport', 
                    'StreamingTV', 'StreamingMovies']
     data['TotalServices'] = (data[service_cols] == 'Yes').sum(axis=1)
-    
+
     # Feature 2: Tenure grouping
     data['TenureGroup'] = pd.cut(data['tenure'], 
-                                bins=[0, 12, 24, 48, 60, 100], 
+                                bins=[-1, 12, 24, 48, 60, 100], 
                                 labels=['0-1yr', '1-2yr', '2-4yr', '4-5yr', '5yr+'])
-    
-    # Feature 3: Charge density (Charge per unit of tenure)
+
+    # Feature 3: Charge density (charges per month)
     data['ChargeDensity'] = data['TotalCharges'] / (data['tenure'] + 1)
-    
+
+    # Feature 4: Contract length indicators
+    data['ContractMonths'] = data['Contract'].map({
+        'Month-to-month': 1,
+        'One year': 12,
+        'Two year': 24
+    }).fillna(0).astype(int)
+    data['IsMonthToMonth'] = (data['Contract'] == 'Month-to-month').astype(int)
+    data['IsTwoYear'] = (data['Contract'] == 'Two year').astype(int)
+
+    # Feature 5: Payment automation and service density
+    data['AutoPay'] = data['PaymentMethod'].str.contains('automatic', case=False, na=False).astype(int)
+    data['ServiceDensity'] = data['TotalServices'] / (data['tenure'] + 1)
+
+    # Feature 6: Senior + partner interaction
+    data['SeniorPartner'] = ((data['SeniorCitizen'] == 1) & (data['Partner'] == 'Yes')).astype(int)
+
     return data
 
 df = engineer_features(df)
@@ -73,15 +89,28 @@ X_test_scaled = scaler.transform(X_test)
 # --- Hyperparameter Tuning ---
 print("Tuning XGBoost Model (RandomizedSearchCV)...")
 param_grid = {
-    'n_estimators': [100, 200, 300],
-    'learning_rate': [0.01, 0.05, 0.1, 0.2],
-    'max_depth': [3, 4, 5, 6],
-    'subsample': [0.8, 0.9, 1.0],
-    'colsample_bytree': [0.8, 0.9, 1.0]
+    'n_estimators': [100, 200, 300, 400],
+    'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
+    'max_depth': [3, 4, 5, 6, 7],
+    'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
+    'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
+    'gamma': [0, 1, 2, 4],
+    'min_child_weight': [1, 3, 5],
+    'reg_alpha': [0, 0.5, 1],
+    'reg_lambda': [1, 2, 4]
 }
 
-xgb = XGBClassifier(random_state=42, use_label_encoder=False, eval_metric='logloss')
-search = RandomizedSearchCV(xgb, param_grid, n_iter=10, cv=3, scoring='roc_auc', n_jobs=-1, random_state=42)
+xgb = XGBClassifier(random_state=42, eval_metric='auc', n_jobs=-1)
+search = RandomizedSearchCV(
+    xgb,
+    param_grid,
+    n_iter=25,
+    cv=3,
+    scoring='roc_auc',
+    n_jobs=-1,
+    random_state=42,
+    verbose=1
+)
 search.fit(X_train_scaled, y_train_res)
 
 model = search.best_estimator_
