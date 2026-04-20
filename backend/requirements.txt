@@ -11,3 +11,4 @@ pydantic
 xgboost
 imbalanced-learn
 lightgbm
+scikit-learn
