@@ -8,3 +8,5 @@ sqlalchemy
 python-dotenv
 psycopg2-binary
 pydantic
+xgboost
+imbalanced-learn
