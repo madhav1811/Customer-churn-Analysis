@@ -5,9 +5,15 @@ import joblib
 import pandas as pd
 import numpy as np
 import os
+import json
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
 from .models import PredictionLog
+
+# Define BASE_DIR
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODELS_DIR = os.path.join(BASE_DIR, 'models')
+DATA_PATH = os.path.join(BASE_DIR, '..', 'data', 'Telco-Customer-Churn.csv')
 
 # Initialize database
 Base.metadata.create_all(bind=engine)
@@ -22,6 +28,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Load ML model and preprocessing artifacts
+try:
+    model = joblib.load(os.path.join(MODELS_DIR, 'churn_model.joblib'))
+    scaler = joblib.load(os.path.join(MODELS_DIR, 'scaler.joblib'))
+    le_dict = joblib.load(os.path.join(MODELS_DIR, 'le_dict.joblib'))
+    feature_names = joblib.load(os.path.join(MODELS_DIR, 'feature_names.joblib'))
+except Exception as e:
+    print(f"Error loading model artifacts: {e}")
+    model = None
+    scaler = None
+    le_dict = None
+    feature_names = None
 
 # Load optimal threshold
 try:
