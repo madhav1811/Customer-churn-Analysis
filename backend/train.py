@@ -3,7 +3,10 @@ import numpy as np
 from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.metrics import classification_report, roc_auc_score, confusion_matrix
+from sklearn.ensemble import RandomForestClassifier, StackingClassifier
+from sklearn.linear_model import LogisticRegression
 from xgboost import XGBClassifier
+from lightgbm import LGBMClassifier
 from imblearn.over_sampling import SMOTE
 import joblib
 import os
@@ -86,35 +89,59 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train_res)
 X_test_scaled = scaler.transform(X_test)
 
-# --- Hyperparameter Tuning ---
-print("Tuning XGBoost Model (RandomizedSearchCV)...")
-param_grid = {
-    'n_estimators': [100, 200, 300, 400],
-    'learning_rate': [0.01, 0.03, 0.05, 0.1, 0.2],
-    'max_depth': [3, 4, 5, 6, 7],
-    'subsample': [0.6, 0.7, 0.8, 0.9, 1.0],
-    'colsample_bytree': [0.6, 0.7, 0.8, 0.9, 1.0],
-    'gamma': [0, 1, 2, 4],
-    'min_child_weight': [1, 3, 5],
-    'reg_alpha': [0, 0.5, 1],
-    'reg_lambda': [1, 2, 4]
-}
+# --- Create Base Models ---
+print("Creating base models for stacking ensemble...")
 
-xgb = XGBClassifier(random_state=42, eval_metric='auc', n_jobs=-1)
-search = RandomizedSearchCV(
-    xgb,
-    param_grid,
-    n_iter=25,
-    cv=3,
-    scoring='roc_auc',
-    n_jobs=-1,
-    random_state=42,
-    verbose=1
+# Base model 1: XGBoost (optimized)
+xgb_base = XGBClassifier(
+    subsample=0.8, reg_lambda=2, reg_alpha=1, n_estimators=400,
+    min_child_weight=1, max_depth=7, learning_rate=0.1,
+    gamma=1, colsample_bytree=0.8, random_state=42, eval_metric='auc'
 )
-search.fit(X_train_scaled, y_train_res)
 
-model = search.best_estimator_
-print(f"Best Parameters: {search.best_params_}")
+# Base model 2: Random Forest
+rf_base = RandomForestClassifier(
+    n_estimators=200,
+    max_depth=10,
+    min_samples_split=5,
+    min_samples_leaf=2,
+    random_state=42,
+    n_jobs=-1
+)
+
+# Base model 3: LightGBM
+lgb_base = LGBMClassifier(
+    n_estimators=200,
+    learning_rate=0.1,
+    max_depth=7,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    verbose=-1
+)
+
+# Meta-learner: Logistic Regression
+meta_learner = LogisticRegression(random_state=42, max_iter=1000)
+
+# --- Create Stacking Ensemble ---
+print("Training stacking ensemble...")
+base_models = [
+    ('xgboost', xgb_base),
+    ('random_forest', rf_base),
+    ('lightgbm', lgb_base)
+]
+
+model = StackingClassifier(
+    estimators=base_models,
+    final_estimator=meta_learner,
+    cv=3,
+    n_jobs=-1,
+    passthrough=False
+)
+
+# Train the ensemble
+model.fit(X_train_scaled, y_train_res)
+print("Ensemble training completed!")
 
 # --- Evaluation ---
 y_pred = model.predict(X_test_scaled)
