@@ -131,22 +131,13 @@ X_train_scaled = scaler.fit_transform(X_train_res)
 X_test_scaled = scaler.transform(X_test)
 
 # --- Feature Selection for Higher Accuracy ---
-print("Performing feature selection to remove noise...")
+print("Skipping feature selection to maintain all engineered features...")
 
-from sklearn.feature_selection import SelectFromModel
-
-# Use Random Forest feature importance for selection
-temp_rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
-temp_rf.fit(X_train_scaled, y_train_res)
-
-# Use a more conservative threshold for feature selection
-rf_selector = SelectFromModel(temp_rf, prefit=True, threshold='median')  # Changed from max_features=30 to threshold='median'
-X_train_selected = rf_selector.transform(X_train_scaled)
-X_test_selected = rf_selector.transform(X_test_scaled)
-
-# Get selected feature indices
-selected_features_mask = rf_selector.get_support()
-selected_feature_names = [feature_names[i] for i in range(len(feature_names)) if selected_features_mask[i]]
+# Use all features (no selection)
+X_train_selected = X_train_scaled
+X_test_selected = X_test_scaled
+selected_feature_names = feature_names
+rf_selector = None  # No selector needed
 
 print(f"Selected {len(selected_feature_names)} features out of {len(feature_names)}")
 print("Top selected features:", selected_feature_names[:10])
@@ -159,42 +150,46 @@ final_feature_names = selected_feature_names
 # --- Create Enhanced Base Models ---
 print("Creating enhanced base models for stacking ensemble...")
 
-# Base model 1: XGBoost (optimized)
+# Base model 1: XGBoost (further optimized)
 xgb_base = XGBClassifier(
-    subsample=0.8, reg_lambda=2, reg_alpha=1, n_estimators=400,
-    min_child_weight=1, max_depth=7, learning_rate=0.1,
-    gamma=1, colsample_bytree=0.8, random_state=42, eval_metric='auc'
+    subsample=0.9, reg_lambda=1, reg_alpha=0.5, n_estimators=500,
+    min_child_weight=3, max_depth=6, learning_rate=0.05,
+    gamma=0.5, colsample_bytree=0.9, random_state=42, eval_metric='auc'
 )
 
-# Base model 2: Random Forest (enhanced)
+# Base model 2: Random Forest (further enhanced)
 rf_base = RandomForestClassifier(
-    n_estimators=300,
-    max_depth=12,
-    min_samples_split=5,
+    n_estimators=400,
+    max_depth=15,
+    min_samples_split=4,
     min_samples_leaf=2,
     max_features='sqrt',
+    bootstrap=True,
     random_state=42,
     n_jobs=-1
 )
 
-# Base model 3: LightGBM (enhanced)
+# Base model 3: LightGBM (further enhanced)
 lgb_base = LGBMClassifier(
-    n_estimators=300,
-    learning_rate=0.08,
-    max_depth=8,
-    subsample=0.85,
-    colsample_bytree=0.85,
-    min_child_samples=20,
+    n_estimators=400,
+    learning_rate=0.05,
+    max_depth=10,
+    subsample=0.9,
+    colsample_bytree=0.9,
+    min_child_samples=15,
+    reg_lambda=1,
+    reg_alpha=0.5,
     random_state=42,
     verbose=-1
 )
 
-# Base model 4: Extra Trees (additional diversity)
+# Base model 4: Extra Trees (enhanced)
 from sklearn.ensemble import ExtraTreesClassifier
 et_base = ExtraTreesClassifier(
-    n_estimators=200,
-    max_depth=10,
-    min_samples_split=5,
+    n_estimators=300,
+    max_depth=12,
+    min_samples_split=4,
+    min_samples_leaf=2,
     random_state=42,
     n_jobs=-1
 )
