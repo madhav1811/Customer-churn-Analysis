@@ -37,6 +37,46 @@ sample_customer = {
 # 1. Convert to DataFrame
 df = pd.DataFrame([sample_customer])
 
+# 2. Feature Engineering (same as training)
+def engineer_features(data):
+    # Total charges cleaning
+    data['TotalCharges'] = pd.to_numeric(data['TotalCharges'], errors='coerce')
+    data['TotalCharges'] = data['TotalCharges'].fillna(data['TotalCharges'].median())
+
+    # Feature 1: Total Services count
+    service_cols = ['PhoneService', 'MultipleLines', 'OnlineSecurity', 
+                   'OnlineBackup', 'DeviceProtection', 'TechSupport', 
+                   'StreamingTV', 'StreamingMovies']
+    data['TotalServices'] = (data[service_cols] == 'Yes').sum(axis=1)
+
+    # Feature 2: Tenure grouping
+    data['TenureGroup'] = pd.cut(data['tenure'], 
+                                bins=[-1, 12, 24, 48, 60, 100], 
+                                labels=['0-1yr', '1-2yr', '2-4yr', '4-5yr', '5yr+'])
+
+    # Feature 3: Charge density (charges per month)
+    data['ChargeDensity'] = data['TotalCharges'] / (data['tenure'] + 1)
+
+    # Feature 4: Contract length indicators
+    data['ContractMonths'] = data['Contract'].map({
+        'Month-to-month': 1,
+        'One year': 12,
+        'Two year': 24
+    }).fillna(0).astype(int)
+    data['IsMonthToMonth'] = (data['Contract'] == 'Month-to-month').astype(int)
+    data['IsTwoYear'] = (data['Contract'] == 'Two year').astype(int)
+
+    # Feature 5: Payment automation and service density
+    data['AutoPay'] = data['PaymentMethod'].str.contains('automatic', case=False, na=False).astype(int)
+    data['ServiceDensity'] = data['TotalServices'] / (data['tenure'] + 1)
+
+    # Feature 6: Senior + partner interaction
+    data['SeniorPartner'] = ((data['SeniorCitizen'] == 1) & (data['Partner'] == 'Yes')).astype(int)
+
+    return data
+
+df = engineer_features(df)
+
 # 2. Preprocess (Label Encoding)
 for col, le in le_dict.items():
     if col in df.columns:
