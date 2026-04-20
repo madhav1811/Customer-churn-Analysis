@@ -19,11 +19,20 @@ const Navbar: React.FC = () => {
           <span className="text-xl font-black gradient-text">ChurnGuard AI</span>
         </Link>
 
+        {/* Desktop Navigation */}
         <div className="hidden md:flex items-center gap-8">
           <NavLink to="/">Home</NavLink>
           {user && <NavLink to="/dashboard">Dashboard</NavLink>}
           <NavLink to="/analytics">Analytics</NavLink>
         </div>
+
+        {/* Mobile Menu Button */}
+        <button
+          className="md:hidden p-2 text-text-muted hover:text-primary transition"
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        >
+          {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+        </button>
 
         <div className="flex items-center gap-4">
           {user ? (
@@ -53,17 +62,33 @@ const Navbar: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {isMobileMenuOpen && (
+        <motion.div
+          initial={{ opacity: 0, height: 0 }}
+          animate={{ opacity: 1, height: 'auto' }}
+          exit={{ opacity: 0, height: 0 }}
+          className="md:hidden border-t border-white/5 bg-bg-dark/95 backdrop-blur-md"
+        >
+          <div className="container py-4 space-y-4">
+            <NavLink to="/" onClick={() => setIsMobileMenuOpen(false)}>Home</NavLink>
+            {user && <NavLink to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>Dashboard</NavLink>}
+            <NavLink to="/analytics" onClick={() => setIsMobileMenuOpen(false)}>Analytics</NavLink>
+          </div>
+        </motion.div>
+      )}
     </nav>
   );
 };
 
-const NavLink = ({ to, children }: { to: string, children: React.ReactNode }) => (
+const NavLink = ({ to, children, onClick }: { to: string, children: React.ReactNode, onClick?: () => void }) => (
   <Link 
     to={to} 
-    className="text-sm font-bold text-text-muted hover:text-text-main transition relative group"
+    onClick={onClick}
+    className="block text-sm font-bold text-text-muted hover:text-text-main transition py-2 md:py-0"
   >
     {children}
-    <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-primary transition-all group-hover:w-full"></span>
   </Link>
 );
 
