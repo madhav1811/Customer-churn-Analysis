@@ -139,7 +139,8 @@ from sklearn.feature_selection import SelectFromModel
 temp_rf = RandomForestClassifier(n_estimators=100, random_state=42, n_jobs=-1)
 temp_rf.fit(X_train_scaled, y_train_res)
 
-rf_selector = SelectFromModel(temp_rf, prefit=True, max_features=30)
+# Use a more conservative threshold for feature selection
+rf_selector = SelectFromModel(temp_rf, prefit=True, threshold='median')  # Changed from max_features=30 to threshold='median'
 X_train_selected = rf_selector.transform(X_train_scaled)
 X_test_selected = rf_selector.transform(X_test_scaled)
 
